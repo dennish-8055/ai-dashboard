@@ -12,10 +12,10 @@ app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
 
-// 🔑 PASTE YOUR GEMINI API KEY HERE
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ✅ Correct model
+
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 let dataset = [];
@@ -38,7 +38,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
     });
 });
 
-// ✅ AI function (FULLY FIXED)
+// ✅ AI function 
 async function getAIQuery(question, columns) {
   try {
     const prompt = `
@@ -71,7 +71,7 @@ Return ONLY valid JSON:
 
     console.log("AI RAW:", text);
 
-    // ✅ Clean JSON (important fix)
+    // ✅ Clean JSON 
     text = text.replace(/```json|```/g, "").trim();
 
     return JSON.parse(text);
