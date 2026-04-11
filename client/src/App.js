@@ -10,6 +10,9 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // ✅ API URL from environment
+  const API = process.env.REACT_APP_API_URL;
+
   // Upload CSV
   const uploadFile = async () => {
     if (!file) {
@@ -21,10 +24,11 @@ function App() {
     formData.append("file", file);
 
     try {
-      await axios.post("http://localhost:5000/upload", formData);
+      await axios.post(`${API}/upload`, formData);
       alert("✅ File Uploaded");
     } catch (err) {
-      alert("Upload failed");
+      console.error(err);
+      alert("❌ Upload failed");
     }
   };
 
@@ -38,10 +42,11 @@ function App() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/ask", { question });
+      const res = await axios.post(`${API}/ask`, { question });
       setData(res.data);
     } catch (err) {
-      alert("Error fetching data");
+      console.error(err);
+      alert("❌ Error fetching data");
     }
 
     setLoading(false);
@@ -64,7 +69,7 @@ function App() {
 
   return (
     <div style={{
-      backgroundColor: "#0f172a",   // ✅ FIXED BACKGROUND
+      backgroundColor: "#0f172a",
       minHeight: "100vh",
       color: "white",
       padding: "30px",
@@ -107,14 +112,14 @@ function App() {
             <YAxis stroke="#ccc" />
             <Tooltip
               contentStyle={{
-              backgroundColor: "#1e293b",
-              border: "none",
-              borderRadius: "8px",
-              color: "white"
-            }}
-  itemStyle={{ color: "#38bdf8" }}
-  cursor={{ fill: "rgba(255,255,255,0.05)" }}
-/>
+                backgroundColor: "#1e293b",
+                border: "none",
+                borderRadius: "8px",
+                color: "white"
+              }}
+              itemStyle={{ color: "#38bdf8" }}
+              cursor={{ fill: "rgba(255,255,255,0.05)" }}
+            />
             <Bar dataKey="value" fill="#38bdf8" />
           </BarChart>
         </ResponsiveContainer>
