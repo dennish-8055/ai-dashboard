@@ -6,7 +6,7 @@ const fs = require("fs");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const app = express(); // ✅ VERY IMPORTANT
+const app = express();
 
 app.use(cors({ origin: "*" }));
 app.use(express.json());
@@ -18,25 +18,47 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 let dataset = [];
 
+// =====================
 // ROOT
+// =====================
 app.get("/", (req, res) => {
   res.send("✅ Server is running");
 });
 
+// =====================
 // HELPERS
+// =====================
+
+// Clean number safely
 function parseNumber(value) {
-  if (!value) return 0;
-  return parseFloat(value.toString().replace(/,/g, "")) || 0;
+  if (!value) return NaN;
+  return parseFloat(value.toString().replace(/,/g, "").trim());
 }
 
-function findBestMatch(value, columns) {
-  if (!value) return null;
-  return columns.find(c =>
-    c.toLowerCase().includes(value.toLowerCase())
+// Detect numeric columns (robust)
+function getNumericColumns(columns, data) {
+  return columns.filter(col =>
+    data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
+// Detect category columns
+function getCategoryColumns(columns, numericColumns) {
+  return columns.filter(col => !numericColumns.includes(col));
+}
+
+// Match column using question keywords
+function matchColumnFromQuestion(question, columns) {
+  const q = question.toLowerCase();
+
+  return columns.find(col =>
+    q.includes(col.toLowerCase())
+  );
+}
+
+// =====================
 // UPLOAD
+// =====================
 app.post("/upload", upload.single("file"), (req, res) => {
   dataset = [];
 
@@ -44,11 +66,14 @@ app.post("/upload", upload.single("file"), (req, res) => {
     .pipe(csv())
     .on("data", row => dataset.push(row))
     .on("end", () => {
+      console.log("CSV Loaded:", dataset[0]);
       res.json({ message: "Uploaded", rows: dataset.length });
     });
 });
 
-// AI
+// =====================
+// AI (optional)
+// =====================
 async function getAIQuery(question, columns, sample) {
   try {
     const prompt = `
@@ -79,7 +104,9 @@ Return JSON:
   }
 }
 
+// =====================
 // ASK
+// =====================
 app.post("/ask", async (req, res) => {
   try {
     if (!dataset.length) {
@@ -91,31 +118,34 @@ app.post("/ask", async (req, res) => {
 
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
 
-    const numericColumns = columns.filter(col =>
-      dataset.some(row => !isNaN(parseNumber(row[col])))
-    );
+    // 🔥 STEP 1: detect column types
+    const numericColumns = getNumericColumns(columns, dataset);
+    const categoryColumns = getCategoryColumns(columns, numericColumns);
 
-    const categoryColumns = columns.filter(col =>
-      !numericColumns.includes(col)
-    );
+    // 🔥 STEP 2: detect metric column
+    let metricColumn =
+      matchColumnFromQuestion(question, numericColumns) ||
+      matchColumnFromQuestion(aiQuery.metric, numericColumns) ||
+      numericColumns[0];
 
+    // 🔥 STEP 3: detect category column
     let categoryColumn =
-      findBestMatch(aiQuery.column, columns) ||
+      matchColumnFromQuestion(question, categoryColumns) ||
+      matchColumnFromQuestion(aiQuery.column, categoryColumns) ||
       categoryColumns[0];
 
-    let metricColumn =
-      findBestMatch(aiQuery.metric, columns);
-
-    const isMetricNumeric =
-      metricColumn && numericColumns.includes(metricColumn);
+    // 🔥 STEP 4: detect query type
+    const q = question.toLowerCase();
 
     const isCountQuery =
-      !metricColumn || !isMetricNumeric;
+      q.includes("count") ||
+      q.includes("number") ||
+      q.includes("how many") ||
+      numericColumns.length === 0;
 
-    if (!metricColumn && numericColumns.length > 0) {
-      metricColumn = numericColumns[0];
-    }
+    console.log("Using:", categoryColumn, metricColumn, isCountQuery);
 
+    // 🔥 STEP 5: aggregate
     const result = {};
 
     dataset.forEach(row => {
@@ -126,7 +156,9 @@ app.post("/ask", async (req, res) => {
         result[key] = (result[key] || 0) + 1;
       } else {
         const value = parseNumber(row[metricColumn]);
-        result[key] = (result[key] || 0) + value;
+        if (!isNaN(value)) {
+          result[key] = (result[key] || 0) + value;
+        }
       }
     });
 
@@ -138,12 +170,12 @@ app.post("/ask", async (req, res) => {
     res.json(formatted);
 
   } catch (err) {
-    console.log(err);
+    console.log("ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// START SERVER
+// =====================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
