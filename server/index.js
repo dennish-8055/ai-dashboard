@@ -43,7 +43,7 @@ function findBestMatch(value, columns) {
   );
 }
 
-// 🔥 FORCE column from question (MAIN FIX)
+// 🔥 FORCE column from question 
 function detectColumnFromQuestion(question, columns) {
   const q = question.toLowerCase();
 
@@ -137,7 +137,7 @@ app.post("/ask", async (req, res) => {
     );
 
     // =====================
-    // 🔥 CATEGORY (FINAL FIX)
+    // 🔥 CATEGORY 
     // =====================
     let categoryColumn =
       detectColumnFromQuestion(question, columns) ||   // ✅ strongest
