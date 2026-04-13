@@ -173,8 +173,9 @@ app.post("/ask", async (req, res) => {
     // =====================
     // DATE MODE
     // =====================
-    let dateMode = "month";
-    if (q.includes("day")) dateMode = "day";
+    let dateMode = "day"; // DEFAULT = DAY
+
+    if (q.includes("month")) dateMode = "month";
     if (q.includes("year")) dateMode = "year";
 
     // =====================
