@@ -168,15 +168,12 @@ function App() {
                 stroke="#1e293b"
                 vertical={false}
               />
-
               <XAxis
                 dataKey="name"
-                stroke="#94a3b8"
-                tick={{ fontSize: 12 }}
                 interval={0}
-                angle={data.length > 8 ? -25 : 0}
-                textAnchor={data.length > 8 ? "end" : "middle"}
-              />
+                angle={0}
+                height={60}
+              /> 
 
               <YAxis stroke="#94a3b8" />
 
