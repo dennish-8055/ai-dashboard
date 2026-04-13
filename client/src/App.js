@@ -87,7 +87,7 @@ function App() {
   };
 
   // =====================
-  // Custom Tooltip (🔥 Clean UI)
+  // Custom Tooltip
   // =====================
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -97,7 +97,7 @@ function App() {
           border: "1px solid #334155",
           borderRadius: "12px",
           padding: "10px 14px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
+          boxShadow: "0 6px 25px rgba(0,0,0,0.5)"
         }}>
           <p style={{
             color: "#38bdf8",
@@ -141,7 +141,7 @@ function App() {
       <div style={card}>
         <input
           style={input}
-          placeholder="Ask: total revenue by product"
+          placeholder="Ask: total revenue by region"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
         />
@@ -168,16 +168,24 @@ function App() {
               <CartesianGrid stroke="#1e293b" vertical={false} />
               <XAxis dataKey="name" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
-              
-              {/* ✅ FIXED TOOLTIP */}
-              <Tooltip content={<CustomTooltip />} cursor={false} />
 
-              {/* ✅ BETTER BAR */}
+              {/* ✅ FIXED TOOLTIP */}
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ fill: "rgba(56,189,248,0.08)" }}
+                offset={10}
+              />
+
+              {/* ✅ IMPROVED BAR */}
               <Bar
                 dataKey="value"
                 fill="#38bdf8"
                 radius={[8, 8, 0, 0]}
-                activeBar={{ fill: "#0ea5e9" }}
+                activeBar={{
+                  fill: "#0ea5e9",
+                  stroke: "#38bdf8",
+                  strokeWidth: 1
+                }}
               />
             </BarChart>
           </ResponsiveContainer>
