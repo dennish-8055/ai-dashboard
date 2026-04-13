@@ -29,30 +29,36 @@ app.get("/", (req, res) => {
 // HELPERS
 // =====================
 
-// Clean number safely
 function parseNumber(value) {
   if (!value) return NaN;
   return parseFloat(value.toString().replace(/,/g, "").trim());
 }
 
-// Detect numeric columns (robust)
+// normalize string (VERY IMPORTANT)
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// detect numeric columns
 function getNumericColumns(columns, data) {
   return columns.filter(col =>
     data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
-// Detect category columns
+// detect category columns
 function getCategoryColumns(columns, numericColumns) {
   return columns.filter(col => !numericColumns.includes(col));
 }
 
-// Match column using question keywords
-function matchColumnFromQuestion(question, columns) {
-  const q = question.toLowerCase();
+// 🔥 SMART MATCH (fuzzy)
+function smartMatch(keyword, columns) {
+  if (!keyword) return null;
+
+  const k = normalize(keyword);
 
   return columns.find(col =>
-    q.includes(col.toLowerCase())
+    normalize(col).includes(k)
   );
 }
 
@@ -72,7 +78,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
 });
 
 // =====================
-// AI (optional)
+// AI
 // =====================
 async function getAIQuery(question, columns, sample) {
   try {
@@ -118,34 +124,32 @@ app.post("/ask", async (req, res) => {
 
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
 
-    // 🔥 STEP 1: detect column types
     const numericColumns = getNumericColumns(columns, dataset);
     const categoryColumns = getCategoryColumns(columns, numericColumns);
 
-    // 🔥 STEP 2: detect metric column
-    let metricColumn =
-      matchColumnFromQuestion(question, numericColumns) ||
-      matchColumnFromQuestion(aiQuery.metric, numericColumns) ||
-      numericColumns[0];
-
-    // 🔥 STEP 3: detect category column
-    let categoryColumn =
-      matchColumnFromQuestion(question, categoryColumns) ||
-      matchColumnFromQuestion(aiQuery.column, categoryColumns) ||
-      categoryColumns[0];
-
-    // 🔥 STEP 4: detect query type
     const q = question.toLowerCase();
 
+    // 🔥 METRIC DETECTION
+    let metricColumn =
+      smartMatch(aiQuery.metric, numericColumns) ||
+      smartMatch(question, numericColumns) ||
+      numericColumns[0];
+
+    // 🔥 CATEGORY DETECTION
+    let categoryColumn =
+      smartMatch(aiQuery.column, categoryColumns) ||
+      smartMatch(question, categoryColumns) ||
+      categoryColumns[0];
+
+    // 🔥 QUERY TYPE
     const isCountQuery =
       q.includes("count") ||
       q.includes("number") ||
       q.includes("how many") ||
-      numericColumns.length === 0;
+      !metricColumn;
 
     console.log("Using:", categoryColumn, metricColumn, isCountQuery);
 
-    // 🔥 STEP 5: aggregate
     const result = {};
 
     dataset.forEach(row => {
