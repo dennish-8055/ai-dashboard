@@ -35,19 +35,19 @@ function parseNumber(value) {
   return parseFloat(value.toString().replace(/,/g, "").trim());
 }
 
-// Detect numeric columns
+// Numeric columns
 function getNumericColumns(columns, data) {
   return columns.filter(col =>
     data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
-// Detect category columns
+// Category columns
 function getCategoryColumns(columns, numericColumns) {
   return columns.filter(col => !numericColumns.includes(col));
 }
 
-// 🔥 Better word matching
+
 function matchColumn(question, columns) {
   const words = question.toLowerCase().split(" ");
 
@@ -78,7 +78,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
 });
 
 // =====================
-// AI (optional)
+// AI 
 // =====================
 async function getAIQuery(question, columns, sample) {
   try {
@@ -128,7 +128,7 @@ app.post("/ask", async (req, res) => {
     const categoryColumns = getCategoryColumns(columns, numericColumns);
 
     // =====================
-    // 🔥 METRIC DETECTION
+    //  METRIC DETECTION
     // =====================
     let metricColumn =
       matchColumn(question, numericColumns) ||
@@ -145,7 +145,7 @@ app.post("/ask", async (req, res) => {
     }
 
     // =====================
-    // 🔥 CATEGORY DETECTION
+    // CATEGORY DETECTION
     // =====================
     let categoryColumn =
       matchColumn(question, categoryColumns) ||
@@ -153,7 +153,7 @@ app.post("/ask", async (req, res) => {
       categoryColumns[0];
 
     // =====================
-    // 🔥 QUERY TYPE
+    // QUERY TYPE
     // =====================
     const q = question.toLowerCase();
 
@@ -166,7 +166,7 @@ app.post("/ask", async (req, res) => {
     console.log("Using:", categoryColumn, metricColumn, isCountQuery);
 
     // =====================
-    // 🔥 AGGREGATION
+    // AGGREGATION
     // =====================
     const result = {};
 
