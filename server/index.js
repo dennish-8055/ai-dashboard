@@ -13,43 +13,58 @@ app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
 
-// Gemini setup
+// Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 let dataset = [];
 
-// ✅ Health check
+// =====================
+// ✅ ROOT
+// =====================
 app.get("/", (req, res) => {
   res.send("✅ Server is running");
 });
 
-
 // =====================
-// ✅ HELPER FUNCTIONS
+// ✅ HELPERS
 // =====================
-
-// 🔥 Clean number (handles commas, spaces)
 function parseNumber(value) {
   if (!value) return 0;
   const cleaned = value.toString().replace(/,/g, "").trim();
   return parseFloat(cleaned) || 0;
 }
 
-// 🔥 Smart column match (VERY IMPORTANT FIX)
-function findBestMatch(aiValue, columns) {
-  if (!aiValue) return null;
-
-  const cleaned = aiValue.toLowerCase().trim();
-
+function findBestMatch(value, columns) {
+  if (!value) return null;
+  const cleaned = value.toLowerCase().trim();
   return columns.find(col =>
     col.toLowerCase().includes(cleaned)
   );
 }
 
+// 🔥 FORCE column from question (MAIN FIX)
+function detectColumnFromQuestion(question, columns) {
+  const q = question.toLowerCase();
+
+  if (q.includes("region")) {
+    return columns.find(c => c.toLowerCase().includes("region"));
+  }
+  if (q.includes("date")) {
+    return columns.find(c => c.toLowerCase().includes("date"));
+  }
+  if (q.includes("product")) {
+    return columns.find(c => c.toLowerCase().includes("product"));
+  }
+  if (q.includes("category")) {
+    return columns.find(c => c.toLowerCase().includes("category"));
+  }
+
+  return null;
+}
 
 // =====================
-// ✅ UPLOAD CSV
+// ✅ UPLOAD
 // =====================
 app.post("/upload", upload.single("file"), (req, res) => {
   dataset = [];
@@ -63,24 +78,18 @@ app.post("/upload", upload.single("file"), (req, res) => {
     });
 });
 
-
 // =====================
-// ✅ AI QUERY
+// ✅ AI
 // =====================
-async function getAIQuery(question, columns, dataSample) {
+async function getAIQuery(question, columns, sample) {
   try {
     const prompt = `
-You are a data assistant.
-
-Columns available: ${columns}
-
-Sample data: ${JSON.stringify(dataSample)}
-
-Convert the question into JSON.
+Columns: ${columns}
+Sample: ${JSON.stringify(sample)}
 
 Question: ${question}
 
-Return ONLY valid JSON:
+Return JSON:
 {
   "column": "",
   "metric": ""
@@ -88,30 +97,22 @@ Return ONLY valid JSON:
 `;
 
     const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
-    const response = await result.response;
-    let text = response.text();
-
-    text = text.replace(/```json|```/g, "").trim();
+    const text = result.response.text()
+      .replace(/```json|```/g, "")
+      .trim();
 
     return JSON.parse(text);
 
-  } catch (err) {
-    console.log("⚠️ AI failed, using fallback");
+  } catch {
     return {};
   }
 }
 
-
 // =====================
-// ✅ ASK ROUTE
+// ✅ ASK
 // =====================
 app.post("/ask", async (req, res) => {
   try {
@@ -125,7 +126,7 @@ app.post("/ask", async (req, res) => {
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
 
     // =====================
-    // 🔥 DETECT NUMERIC COLUMNS
+    // 🔥 NUMERIC COLUMNS
     // =====================
     const numericColumns = columns.filter(col =>
       dataset.some(row => !isNaN(parseNumber(row[col])))
@@ -135,20 +136,16 @@ app.post("/ask", async (req, res) => {
       !numericColumns.includes(col)
     );
 
-    const filteredCategory = categoryColumns.filter(col =>
-      !col.toLowerCase().includes("date")
-    );
-
     // =====================
-    // 🔥 FIXED COLUMN MATCHING
+    // 🔥 CATEGORY (FINAL FIX)
     // =====================
     let categoryColumn =
-      findBestMatch(aiQuery.column, columns) ||
-      filteredCategory[0] ||
-      categoryColumns[0];
+      detectColumnFromQuestion(question, columns) ||   // ✅ strongest
+      findBestMatch(aiQuery.column, columns) ||        // AI
+      categoryColumns[0];                              // fallback
 
     // =====================
-    // 🔥 SMART METRIC DETECTION
+    // 🔥 METRIC
     // =====================
     let metricColumn = numericColumns[0];
     const q = question.toLowerCase();
@@ -157,26 +154,27 @@ app.post("/ask", async (req, res) => {
       metricColumn =
         numericColumns.find(c => c.toLowerCase().includes("revenue")) ||
         metricColumn;
-    } else if (q.includes("sales")) {
+    }
+    else if (q.includes("sales")) {
       metricColumn =
         numericColumns.find(c => c.toLowerCase().includes("sales")) ||
         metricColumn;
-    } else if (q.includes("unit")) {
+    }
+    else if (q.includes("unit")) {
       metricColumn =
         numericColumns.find(c => c.toLowerCase().includes("unit")) ||
         metricColumn;
     }
 
-    // AI override if valid
     const aiMetric = findBestMatch(aiQuery.metric, columns);
     if (aiMetric) metricColumn = aiMetric;
 
-    console.log("Using:", categoryColumn, metricColumn);
+    console.log("FINAL:", categoryColumn, metricColumn);
 
     // =====================
-    // 🔥 AGGREGATION
+    // 🔥 AGGREGATE
     // =====================
-    const resultData = {};
+    const result = {};
 
     dataset.forEach(row => {
       const key = row[categoryColumn];
@@ -184,28 +182,25 @@ app.post("/ask", async (req, res) => {
 
       if (!key) return;
 
-      resultData[key] = (resultData[key] || 0) + value;
+      result[key] = (result[key] || 0) + value;
     });
 
-    const formatted = Object.entries(resultData).map(([key, value]) => ({
-      name: key,
-      value,
+    const formatted = Object.entries(result).map(([k, v]) => ({
+      name: k,
+      value: v
     }));
 
     res.json(formatted);
 
   } catch (err) {
-    console.log("🔥 ERROR:", err.message);
+    console.log("ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// =====================
-// ✅ START SERVER
 // =====================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Running on ${PORT}`);
 });
