@@ -173,10 +173,17 @@ app.post("/ask", async (req, res) => {
     // =====================
     // DATE MODE
     // =====================
-    let dateMode = "day"; // DEFAULT = DAY
+    let uniqueDates = new Set(dataset.map(r => r[categoryColumn]));
 
-    if (q.includes("month")) dateMode = "month";
-    if (q.includes("year")) dateMode = "year";
+    let dateMode = "day";
+
+    // If all dates are first of month → treat as month
+    if ([...uniqueDates].every(d => new Date(d).getDate() === 1)) {
+    dateMode = "month";
+}
+
+if (q.includes("year")) dateMode = "year";
+if (q.includes("month")) dateMode = "month";
 
     // =====================
     // QUERY TYPE
