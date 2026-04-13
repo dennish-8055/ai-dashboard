@@ -22,32 +22,29 @@ let dataset = [];
 // ROOT
 // =====================
 app.get("/", (req, res) => {
-  res.send("✅ Server is running");
+  res.send("✅ Server running");
 });
 
 // =====================
 // HELPERS
 // =====================
 
-// parse number
 function parseNumber(value) {
   if (!value) return NaN;
   return parseFloat(value.toString().replace(/,/g, "").trim());
 }
 
-// detect numeric columns
 function getNumericColumns(columns, data) {
   return columns.filter(col =>
     data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
-// detect category columns
 function getCategoryColumns(columns, numericColumns) {
   return columns.filter(col => !numericColumns.includes(col));
 }
 
-// SMART MATCH 
+// 🔥 STRONG MATCH
 function matchColumn(question, columns) {
   const q = question.toLowerCase();
 
@@ -61,12 +58,18 @@ function matchColumn(question, columns) {
   });
 }
 
-// FORMAT DATE 
-function formatDate(value) {
-  if (!value) return null;
-
+// 🔥 DATE FORMAT (dynamic)
+function formatDate(value, mode = "month") {
   const d = new Date(value);
   if (isNaN(d)) return value;
+
+  if (mode === "day") {
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  }
+
+  if (mode === "year") {
+    return `${d.getFullYear()}`;
+  }
 
   return `${d.getFullYear()}-${d.getMonth() + 1}`;
 }
@@ -81,7 +84,6 @@ app.post("/upload", upload.single("file"), (req, res) => {
     .pipe(csv())
     .on("data", row => dataset.push(row))
     .on("end", () => {
-      console.log("CSV Loaded:", dataset[0]);
       res.json({ message: "Uploaded", rows: dataset.length });
     });
 });
@@ -108,11 +110,9 @@ Return JSON:
       contents: [{ role: "user", parts: [{ text: prompt }] }]
     });
 
-    const text = result.response.text()
-      .replace(/```json|```/g, "")
-      .trim();
-
-    return JSON.parse(text);
+    return JSON.parse(
+      result.response.text().replace(/```json|```/g, "").trim()
+    );
 
   } catch {
     return {};
@@ -145,29 +145,25 @@ app.post("/ask", async (req, res) => {
       matchColumn(question, numericColumns) ||
       matchColumn(aiQuery.metric || "", numericColumns);
 
-    // ❗ if no numeric data → return empty
     if (!metricColumn && numericColumns.length === 0) {
       return res.json([]);
     }
 
-    // fallback safely
-    if (!metricColumn && numericColumns.length > 0) {
+    if (!metricColumn) {
       metricColumn = numericColumns[0];
     }
 
     // =====================
-    // CATEGORY 
+    // CATEGORY
     // =====================
     let categoryColumn = null;
 
-    // PRIORITY: DATE
     if (q.includes("date") || q.includes("month") || q.includes("year")) {
       categoryColumn = columns.find(col =>
         col.toLowerCase().includes("date")
       );
     }
 
-    // fallback
     categoryColumn =
       categoryColumn ||
       matchColumn(question, categoryColumns) ||
@@ -175,28 +171,31 @@ app.post("/ask", async (req, res) => {
       categoryColumns[0];
 
     // =====================
+    // DATE MODE
+    // =====================
+    let dateMode = "month";
+    if (q.includes("day")) dateMode = "day";
+    if (q.includes("year")) dateMode = "year";
+
+    // =====================
     // QUERY TYPE
     // =====================
     const isCountQuery =
       q.includes("count") ||
       q.includes("number") ||
-      q.includes("how many") ||
-      !metricColumn;
-
-    console.log("Using:", categoryColumn, metricColumn, isCountQuery);
+      q.includes("how many");
 
     // =====================
     // AGGREGATION
     // =====================
-    const result = {};
+    let result = {};
 
     dataset.forEach(row => {
       let key = row[categoryColumn];
       if (!key) return;
 
-      // DATE GROUPING 
       if (categoryColumn.toLowerCase().includes("date")) {
-        key = formatDate(key);
+        key = formatDate(key, dateMode);
       }
 
       if (isCountQuery) {
@@ -208,6 +207,27 @@ app.post("/ask", async (req, res) => {
         }
       }
     });
+
+   
+    if (
+      Object.keys(result).length === 1 &&
+      categoryColumn.toLowerCase().includes("date")
+    ) {
+      result = {};
+
+      dataset.forEach(row => {
+        let key = formatDate(row[categoryColumn], "day");
+
+        if (isCountQuery) {
+          result[key] = (result[key] || 0) + 1;
+        } else {
+          const value = parseNumber(row[metricColumn]);
+          if (!isNaN(value)) {
+            result[key] = (result[key] || 0) + value;
+          }
+        }
+      });
+    }
 
     const formatted = Object.entries(result).map(([k, v]) => ({
       name: k,
