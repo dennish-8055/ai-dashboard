@@ -10,8 +10,12 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ API URL from environment
-  const API = process.env.REACT_APP_API_URL;
+  // ✅ SAFE API URL (fallback added)
+  const API =
+    process.env.REACT_APP_API_URL ||
+    "https://ai-dashboard-backend.onrender.com"; // 🔥 replace if using other link
+
+  console.log("API URL:", API); // debug
 
   // Upload CSV
   const uploadFile = async () => {
@@ -43,6 +47,7 @@ function App() {
 
     try {
       const res = await axios.post(`${API}/ask`, { question });
+      console.log("Response:", res.data); // debug
       setData(res.data);
     } catch (err) {
       console.error(err);
@@ -89,7 +94,7 @@ function App() {
       <div style={{ marginBottom: "20px" }}>
         <input
           style={input}
-          placeholder="Ask something like: total sales by product"
+          placeholder="Ask something like: total revenue by product"
           onChange={(e) => setQuestion(e.target.value)}
         />
         <button style={btn} onClick={askAI}>Ask</button>
