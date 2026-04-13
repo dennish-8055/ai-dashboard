@@ -1,131 +1,166 @@
-# 📊 AI Data Analyst Dashboard
+# 📊 AI Data Dashboard
 
-## 🚀 Overview
-
-This project is a web-based AI-powered data analysis dashboard that allows users to upload CSV files, ask questions in natural language, and visualize insights instantly.
-
-It simplifies data analysis for non-technical users by combining data processing, visualization, and AI-based query interpretation.
+An intelligent web application that allows users to upload CSV files, ask natural language questions, and visualize insights instantly using AI.
 
 ---
 
-## 🎯 Features
+## 🚀 Live Demo
 
-* 📂 Upload CSV files
-* 💬 Ask questions in natural language
-* 📊 Dynamic data visualization (Bar Charts)
-* 📈 Automatic data aggregation
-* 🧠 Insight generation (highest value detection)
-* 🔒 Secure API key handling using environment variables
-* ⚡ Fast and responsive UI
+Frontend: https://ai-dashboard-three-rouge.vercel.app
+Backend: https://ai-dashboard-backend.onrender.com
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Features
+
+* 📁 Upload any CSV file
+* 🤖 Ask questions in plain English
+* 📊 Automatic data aggregation
+* 📈 Interactive bar chart visualization
+* 🧠 AI-powered query understanding (Google Gemini)
+* 🔍 Smart column detection (works with different datasets)
+* 💡 Auto-generated insights
+
+---
+
+## 🧠 Example Questions
+
+* total revenue by product
+* total sales by region
+* total units by category
+* total revenue by date
+
+---
+
+## 🏗️ Tech Stack
 
 ### Frontend
 
 * React.js
-* Recharts
 * Axios
+* Recharts
 
 ### Backend
 
 * Node.js
 * Express.js
-* CSV Parser
+* Multer (file upload)
+* csv-parser
 
 ### AI Integration
 
-* Google Gemini API (with fallback mechanism)
+* Google Gemini API
+
+### Deployment
+
+* Frontend: Vercel
+* Backend: Render
 
 ---
 
-## ⚙️ Installation & Setup
+## 📂 Project Structure
+
+```
+ai-dashboard/
+│
+├── client/        # React frontend
+│   └── src/
+│       └── App.js
+│
+├── server/        # Node.js backend
+│   └── index.js
+│
+└── README.md
+```
+
+---
+
+## ⚙️ Setup Instructions
 
 ### 1️⃣ Clone the repository
 
-```bash
-git clone https://github.com/dennish-8055/ai-dashboard.git
+```
+git clone https://github.com/your-username/ai-dashboard.git
 cd ai-dashboard
 ```
 
 ---
 
-### 2️⃣ Setup Backend
+### 2️⃣ Backend Setup
 
-```bash
+```
 cd server
 npm install
 ```
 
 Create a `.env` file:
 
-```env
+```
 GEMINI_API_KEY=your_api_key_here
 ```
 
 Run backend:
 
-```bash
+```
 node index.js
 ```
 
 ---
 
-### 3️⃣ Setup Frontend
+### 3️⃣ Frontend Setup
 
-Open new terminal:
-
-```bash
+```
 cd client
 npm install
+```
+
+Create `.env`:
+
+```
+REACT_APP_API_URL=http://localhost:5000
+```
+
+Run frontend:
+
+```
 npm start
 ```
 
 ---
 
-## 🧠 How It Works
+## 🌐 Deployment
 
-1. User uploads a CSV file
-2. Data is parsed and stored on the server
-3. User asks a question (e.g., "total sales by product")
-4. System interprets query
-5. Data is processed and aggregated
-6. Results are displayed as charts with insights
+* Frontend deployed on Vercel
+* Backend deployed on Render
+
+No need to keep your laptop running — app is hosted online.
 
 ---
 
-## 🔐 Security
+## ⚠️ Limitations
 
-* API keys are stored using `.env` files
-* `.env` is excluded using `.gitignore`
-* `.env.example` is provided for setup
-
----
-
-## 📌 Example Queries
-
-* “Total sales by product”
-* “Show sales distribution”
-* “Which product has highest sales?”
+* Supports aggregation queries only (sum-based)
+* Does not support filtering (e.g., only Asia)
+* Does not support advanced analytics (avg, min, max)
 
 ---
 
-## 📈 Future Improvements
+## 🚀 Future Improvements
 
-* Line and Pie charts
-* Advanced AI query handling
-* Dashboard saving feature
-* Real-time analytics
+* Top N results (Top 5 products)
+* Filtering support (region-based queries)
+* Multiple chart types (line, pie)
+* Sorting & time-series analysis
+* Better AI query understanding
 
 ---
 
 ## 👨‍💻 Author
 
-* Dennish Yadav
+Developed by Dennis
 
 ---
 
-## 📄 License
+## 📜 License
 
-This project is for educational and internship purposes.
+This project is for educational purposes.
