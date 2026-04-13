@@ -39,7 +39,7 @@ app.post("/ask", async (req, res) => {
       findBestMatch(aiQuery.metric, columns);
 
     // =====================
-    // 🔥 CRITICAL FIX
+   
     // =====================
     const isMetricNumeric =
       metricColumn && numericColumns.includes(metricColumn);
