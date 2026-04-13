@@ -21,9 +21,9 @@ function App() {
     process.env.REACT_APP_API_URL ||
     "https://ai-dashboard-backend.onrender.com";
 
-  // =====================
+  
   // Upload
-  // =====================
+  
   const uploadFile = async () => {
     if (!file) return setMessage("⚠️ Select a file");
 
@@ -39,9 +39,9 @@ function App() {
     }
   };
 
-  // =====================
+  
   // Ask
-  // =====================
+  
   const askAI = async () => {
     if (!question) return setMessage("⚠️ Enter a question");
 
@@ -64,9 +64,9 @@ function App() {
     setLoading(false);
   };
 
-  // =====================
+  
   // Insight
-  // =====================
+
   const getInsight = () => {
     if (!data.length) return "";
 
@@ -77,9 +77,9 @@ function App() {
     return `📊 ${max.name} has highest value (${max.value.toLocaleString()})`;
   };
 
-  // =====================
-  // Tooltip (clean & centered)
-  // =====================
+  
+  // Tooltip 
+  
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -205,9 +205,9 @@ function App() {
   );
 }
 
-// =====================
+
 // Styles
-// =====================
+
 const btn = {
   marginLeft: "10px",
   padding: "8px 14px",
