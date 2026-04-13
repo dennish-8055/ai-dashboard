@@ -21,36 +21,25 @@ function App() {
     process.env.REACT_APP_API_URL ||
     "https://ai-dashboard-backend.onrender.com";
 
-  // =====================
-  // Upload CSV
-  // =====================
+  // Upload
   const uploadFile = async () => {
-    if (!file) {
-      setMessage("⚠️ Please select a file");
-      return;
-    }
+    if (!file) return setMessage("⚠️ Select a file");
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       await axios.post(`${API}/upload`, formData);
-      setMessage("✅ File uploaded successfully");
+      setMessage("✅ Uploaded successfully");
       setData([]);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setMessage("❌ Upload failed");
     }
   };
 
-  // =====================
-  // Ask Question
-  // =====================
+  // Ask
   const askAI = async () => {
-    if (!question) {
-      setMessage("⚠️ Enter a question");
-      return;
-    }
+    if (!question) return setMessage("⚠️ Enter a question");
 
     setLoading(true);
     setMessage("");
@@ -58,54 +47,38 @@ function App() {
     try {
       const res = await axios.post(`${API}/ask`, { question });
 
-      if (!res.data || res.data.length === 0) {
+      if (!res.data.length) {
         setData([]);
-        setMessage("📭 No data found. Try a different question.");
+        setMessage("📭 No data found");
       } else {
         setData(res.data);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setMessage("❌ Error fetching data");
     }
 
     setLoading(false);
   };
 
-  // =====================
   // Insight
-  // =====================
   const getInsight = () => {
     if (!data.length) return "";
 
-    let max = data[0];
-    data.forEach(d => {
-      if (d.value > max.value) max = d;
-    });
-
-    return `📊 Insight: ${max.name} has the highest value (${max.value.toLocaleString()}).`;
+    const max = data.reduce((a, b) => (a.value > b.value ? a : b));
+    return `📊 ${max.name} has highest value (${max.value.toLocaleString()})`;
   };
 
-  // =====================
-  //  Tooltip
-  // =====================
+  // Tooltip
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
+    if (active && payload?.length) {
       return (
         <div style={{
           background: "#020617",
-          border: "1px solid #334155",
-          borderRadius: "12px",
-          padding: "10px 14px",
-          boxShadow: "0 6px 25px rgba(0,0,0,0.5)"
+          padding: "10px",
+          borderRadius: "10px",
+          border: "1px solid #334155"
         }}>
-          <p style={{
-            color: "#38bdf8",
-            fontWeight: "bold",
-            marginBottom: "4px"
-          }}>
-            {label}
-          </p>
+          <p style={{ color: "#38bdf8", fontWeight: "bold" }}>{label}</p>
           <p style={{ color: "#e2e8f0" }}>
             Value: {payload[0].value.toLocaleString()}
           </p>
@@ -120,127 +93,47 @@ function App() {
       background: "#020617",
       minHeight: "100vh",
       color: "white",
-      padding: "40px",
-      fontFamily: "system-ui"
+      padding: "40px"
     }}>
-      <h1 style={{
-        fontSize: "34px",
-        marginBottom: "25px",
-        fontWeight: "600"
-      }}>
-        📊 AI Data Dashboard
-      </h1>
+      <h1>📊 AI Data Dashboard</h1>
 
       {/* Upload */}
-      <div style={card}>
-        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-        <button style={btn} onClick={uploadFile}>Upload</button>
+      <div style={{ marginBottom: 20 }}>
+        <input type="file" onChange={e => setFile(e.target.files[0])} />
+        <button onClick={uploadFile}>Upload</button>
       </div>
 
       {/* Ask */}
-      <div style={card}>
+      <div style={{ marginBottom: 20 }}>
         <input
-          style={input}
-          placeholder="Ask: total revenue by region"
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={e => setQuestion(e.target.value)}
+          placeholder="Ask: total revenue by region"
         />
-        <button style={btn} onClick={askAI}>Ask</button>
+        <button onClick={askAI}>Ask</button>
       </div>
 
-      {/* Message */}
-      {message && (
-        <p style={{ color: "#94a3b8", marginBottom: "10px" }}>
-          {message}
-        </p>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <p style={{ color: "#38bdf8" }}>⏳ Processing...</p>
-      )}
+      {message && <p>{message}</p>}
+      {loading && <p>⏳ Loading...</p>}
 
       {/* Chart */}
       {data.length > 0 && (
-        <div style={chartCard}>
-          <ResponsiveContainer width="100%" height={320}>
+        <div style={{ background: "#0f172a", padding: 20, borderRadius: 10 }}>
+          <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data}>
-              <CartesianGrid stroke="#1e293b" vertical={false} />
+              <CartesianGrid stroke="#1e293b" />
               <XAxis dataKey="name" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
-
-              {/* ✅ TOOLTIP */}
-              <Tooltip
-               content={<CustomTooltip />}
-               cursor={{ fill: "rgba(56,189,248,0.08)" }}
-               wrapperStyle={{ outline: "none" }}
-              />
-
-              {/* ✅ BAR */}
-              <Bar
-                dataKey="value"
-                fill="#38bdf8"
-                radius={[8, 8, 0, 0]}
-                activeBar={{
-                  fill: "#0ea5e9",
-                  stroke: "#38bdf8",
-                  strokeWidth: 1
-                }}
-              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="value" fill="#38bdf8" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Insight */}
-      {data.length > 0 && (
-        <p style={{
-          marginTop: "20px",
-          color: "#94a3b8",
-          fontSize: "16px"
-        }}>
-          {getInsight()}
-        </p>
-      )}
+      {data.length > 0 && <p>{getInsight()}</p>}
     </div>
   );
 }
-
-// =====================
-// Styles
-// =====================
-const card = {
-  marginBottom: "20px",
-  display: "flex",
-  gap: "10px",
-  alignItems: "center"
-};
-
-const chartCard = {
-  background: "#0f172a",
-  padding: "20px",
-  borderRadius: "14px",
-  boxShadow: "0 6px 30px rgba(0,0,0,0.4)"
-};
-
-const btn = {
-  padding: "8px 16px",
-  background: "#38bdf8",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontWeight: "600",
-  color: "#020617"
-};
-
-const input = {
-  padding: "10px",
-  width: "320px",
-  borderRadius: "8px",
-  border: "1px solid #334155",
-  outline: "none",
-  background: "#020617",
-  color: "white"
-};
 
 export default App;
