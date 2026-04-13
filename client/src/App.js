@@ -6,7 +6,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  CartesianGrid
 } from "recharts";
 
 function App() {
@@ -86,22 +87,28 @@ function App() {
   };
 
   // =====================
-  // Custom Tooltip (🔥 PRO UI)
+  // Custom Tooltip (🔥 Clean UI)
   // =====================
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div style={{
-          background: "#0f172a",
+          background: "#020617",
           border: "1px solid #334155",
-          borderRadius: "10px",
-          padding: "10px",
-          color: "white"
+          borderRadius: "12px",
+          padding: "10px 14px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
         }}>
-          <p style={{ color: "#38bdf8", fontWeight: "bold" }}>
+          <p style={{
+            color: "#38bdf8",
+            fontWeight: "bold",
+            marginBottom: "4px"
+          }}>
             {label}
           </p>
-          <p>Value: {payload[0].value.toLocaleString()}</p>
+          <p style={{ color: "#e2e8f0" }}>
+            Value: {payload[0].value.toLocaleString()}
+          </p>
         </div>
       );
     }
@@ -110,27 +117,31 @@ function App() {
 
   return (
     <div style={{
-      backgroundColor: "#0f172a",
+      background: "#020617",
       minHeight: "100vh",
       color: "white",
-      padding: "30px",
-      fontFamily: "sans-serif"
+      padding: "40px",
+      fontFamily: "system-ui"
     }}>
-      <h1 style={{ fontSize: "32px", marginBottom: "20px" }}>
+      <h1 style={{
+        fontSize: "34px",
+        marginBottom: "25px",
+        fontWeight: "600"
+      }}>
         📊 AI Data Dashboard
       </h1>
 
       {/* Upload */}
-      <div style={{ marginBottom: "20px" }}>
+      <div style={card}>
         <input type="file" onChange={(e) => setFile(e.target.files[0])} />
         <button style={btn} onClick={uploadFile}>Upload</button>
       </div>
 
       {/* Ask */}
-      <div style={{ marginBottom: "20px" }}>
+      <div style={card}>
         <input
           style={input}
-          placeholder="Ask something like: total revenue by product"
+          placeholder="Ask: total revenue by product"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
         />
@@ -151,17 +162,23 @@ function App() {
 
       {/* Chart */}
       {data.length > 0 && (
-        <div style={{
-          background: "#1e293b",
-          padding: "20px",
-          borderRadius: "10px"
-        }}>
-          <ResponsiveContainer width="100%" height={300}>
+        <div style={chartCard}>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={data}>
-              <XAxis dataKey="name" stroke="#ccc" />
-              <YAxis stroke="#ccc" />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" fill="#38bdf8" />
+              <CartesianGrid stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="name" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" />
+              
+              {/* ✅ FIXED TOOLTIP */}
+              <Tooltip content={<CustomTooltip />} cursor={false} />
+
+              {/* ✅ BETTER BAR */}
+              <Bar
+                dataKey="value"
+                fill="#38bdf8"
+                radius={[8, 8, 0, 0]}
+                activeBar={{ fill: "#0ea5e9" }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -170,7 +187,7 @@ function App() {
       {/* Insight */}
       {data.length > 0 && (
         <p style={{
-          marginTop: "15px",
+          marginTop: "20px",
           color: "#94a3b8",
           fontSize: "16px"
         }}>
@@ -181,23 +198,41 @@ function App() {
   );
 }
 
+// =====================
 // Styles
+// =====================
+const card = {
+  marginBottom: "20px",
+  display: "flex",
+  gap: "10px",
+  alignItems: "center"
+};
+
+const chartCard = {
+  background: "#0f172a",
+  padding: "20px",
+  borderRadius: "14px",
+  boxShadow: "0 6px 30px rgba(0,0,0,0.4)"
+};
+
 const btn = {
-  marginLeft: "10px",
-  padding: "8px 14px",
+  padding: "8px 16px",
   background: "#38bdf8",
   border: "none",
-  borderRadius: "6px",
+  borderRadius: "8px",
   cursor: "pointer",
-  fontWeight: "bold"
+  fontWeight: "600",
+  color: "#020617"
 };
 
 const input = {
-  padding: "8px",
-  width: "300px",
-  borderRadius: "6px",
-  border: "none",
-  outline: "none"
+  padding: "10px",
+  width: "320px",
+  borderRadius: "8px",
+  border: "1px solid #334155",
+  outline: "none",
+  background: "#020617",
+  color: "white"
 };
 
 export default App;
