@@ -29,37 +29,46 @@ app.get("/", (req, res) => {
 // HELPERS
 // =====================
 
-// Parse numbers safely
+// parse number
 function parseNumber(value) {
   if (!value) return NaN;
   return parseFloat(value.toString().replace(/,/g, "").trim());
 }
 
-// Numeric columns
+// detect numeric columns
 function getNumericColumns(columns, data) {
   return columns.filter(col =>
     data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
-// Category columns
+// detect category columns
 function getCategoryColumns(columns, numericColumns) {
   return columns.filter(col => !numericColumns.includes(col));
 }
 
-
+// SMART MATCH 
 function matchColumn(question, columns) {
-  const words = question.toLowerCase().split(" ");
+  const q = question.toLowerCase();
 
-  for (let word of words) {
-    for (let col of columns) {
-      if (col.toLowerCase().includes(word)) {
-        return col;
-      }
-    }
-  }
+  return columns.find(col => {
+    const c = col.toLowerCase();
+    return (
+      q.includes(c) ||
+      c.includes(q) ||
+      q.split(" ").some(word => c.includes(word))
+    );
+  });
+}
 
-  return null;
+// FORMAT DATE 
+function formatDate(value) {
+  if (!value) return null;
+
+  const d = new Date(value);
+  if (isNaN(d)) return value;
+
+  return `${d.getFullYear()}-${d.getMonth() + 1}`;
 }
 
 // =====================
@@ -78,7 +87,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
 });
 
 // =====================
-// AI 
+// AI (optional)
 // =====================
 async function getAIQuery(question, columns, sample) {
   try {
@@ -127,27 +136,40 @@ app.post("/ask", async (req, res) => {
     const numericColumns = getNumericColumns(columns, dataset);
     const categoryColumns = getCategoryColumns(columns, numericColumns);
 
+    const q = question.toLowerCase();
+
     // =====================
-    //  METRIC DETECTION
+    // METRIC
     // =====================
     let metricColumn =
       matchColumn(question, numericColumns) ||
       matchColumn(aiQuery.metric || "", numericColumns);
 
-    // ❗ VALIDATION (IMPORTANT FIX)
+    // ❗ if no numeric data → return empty
     if (!metricColumn && numericColumns.length === 0) {
-      return res.json([]); // no numeric data at all
+      return res.json([]);
     }
 
-    // fallback ONLY if numeric exists
+    // fallback safely
     if (!metricColumn && numericColumns.length > 0) {
       metricColumn = numericColumns[0];
     }
 
     // =====================
-    // CATEGORY DETECTION
+    // CATEGORY 
     // =====================
-    let categoryColumn =
+    let categoryColumn = null;
+
+    // PRIORITY: DATE
+    if (q.includes("date") || q.includes("month") || q.includes("year")) {
+      categoryColumn = columns.find(col =>
+        col.toLowerCase().includes("date")
+      );
+    }
+
+    // fallback
+    categoryColumn =
+      categoryColumn ||
       matchColumn(question, categoryColumns) ||
       matchColumn(aiQuery.column || "", categoryColumns) ||
       categoryColumns[0];
@@ -155,8 +177,6 @@ app.post("/ask", async (req, res) => {
     // =====================
     // QUERY TYPE
     // =====================
-    const q = question.toLowerCase();
-
     const isCountQuery =
       q.includes("count") ||
       q.includes("number") ||
@@ -171,8 +191,13 @@ app.post("/ask", async (req, res) => {
     const result = {};
 
     dataset.forEach(row => {
-      const key = row[categoryColumn];
+      let key = row[categoryColumn];
       if (!key) return;
+
+      // DATE GROUPING 
+      if (categoryColumn.toLowerCase().includes("date")) {
+        key = formatDate(key);
+      }
 
       if (isCountQuery) {
         result[key] = (result[key] || 0) + 1;
