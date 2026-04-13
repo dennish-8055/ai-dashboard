@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer
 } from "recharts";
 
 function App() {
@@ -9,15 +14,18 @@ function App() {
   const [question, setQuestion] = useState("");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const API =
     process.env.REACT_APP_API_URL ||
     "https://ai-dashboard-backend.onrender.com";
 
+  // =====================
   // Upload CSV
+  // =====================
   const uploadFile = async () => {
     if (!file) {
-      alert("Please select a file");
+      setMessage("⚠️ Please select a file");
       return;
     }
 
@@ -26,57 +34,78 @@ function App() {
 
     try {
       await axios.post(`${API}/upload`, formData);
-      alert("✅ File Uploaded");
-      setData([]); // 🔥 reset old chart
+      setMessage("✅ File uploaded successfully");
+      setData([]);
     } catch (err) {
       console.error(err);
-      alert("❌ Upload failed");
+      setMessage("❌ Upload failed");
     }
   };
 
-  // Ask question
+  // =====================
+  // Ask Question
+  // =====================
   const askAI = async () => {
     if (!question) {
-      alert("Enter a question");
+      setMessage("⚠️ Enter a question");
       return;
     }
 
     setLoading(true);
+    setMessage("");
 
     try {
       const res = await axios.post(`${API}/ask`, { question });
 
-      console.log("Response:", res.data);
-
-      // 🔥 FIX: validate response
       if (!res.data || res.data.length === 0) {
-        alert("⚠️ No data found for this question");
         setData([]);
+        setMessage("📭 No data found. Try a different question.");
       } else {
         setData(res.data);
       }
-
     } catch (err) {
       console.error(err);
-      alert("❌ Error fetching data");
+      setMessage("❌ Error fetching data");
     }
 
     setLoading(false);
   };
 
-  // Insight generator
+  // =====================
+  // Insight
+  // =====================
   const getInsight = () => {
     if (!data.length) return "";
 
-    let maxItem = data[0];
-
-    data.forEach(item => {
-      if (item.value > maxItem.value) {
-        maxItem = item;
-      }
+    let max = data[0];
+    data.forEach(d => {
+      if (d.value > max.value) max = d;
     });
 
-    return `📊 Insight: ${maxItem.name} has the highest value (${maxItem.value}).`;
+    return `📊 Insight: ${max.name} has the highest value (${max.value.toLocaleString()}).`;
+  };
+
+  // =====================
+  // Custom Tooltip (🔥 PRO UI)
+  // =====================
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{
+          background: "#0f172a",
+          border: "1px solid #334155",
+          borderRadius: "10px",
+          padding: "10px",
+          color: "white"
+        }}>
+          <p style={{ color: "#38bdf8", fontWeight: "bold" }}>
+            {label}
+          </p>
+          <p>Value: {payload[0].value.toLocaleString()}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -102,21 +131,22 @@ function App() {
         <input
           style={input}
           placeholder="Ask something like: total revenue by product"
+          value={question}
           onChange={(e) => setQuestion(e.target.value)}
         />
         <button style={btn} onClick={askAI}>Ask</button>
       </div>
 
+      {/* Message */}
+      {message && (
+        <p style={{ color: "#94a3b8", marginBottom: "10px" }}>
+          {message}
+        </p>
+      )}
+
       {/* Loading */}
       {loading && (
         <p style={{ color: "#38bdf8" }}>⏳ Processing...</p>
-      )}
-
-      {/* ❌ No Data Message */}
-      {!loading && data.length === 0 && (
-        <p style={{ color: "#94a3b8" }}>
-          📭 No data to display. Try a different question.
-        </p>
       )}
 
       {/* Chart */}
@@ -130,15 +160,7 @@ function App() {
             <BarChart data={data}>
               <XAxis dataKey="name" stroke="#ccc" />
               <YAxis stroke="#ccc" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1e293b",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white"
-                }}
-                itemStyle={{ color: "#38bdf8" }}
-              />
+              <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="value" fill="#38bdf8" />
             </BarChart>
           </ResponsiveContainer>
