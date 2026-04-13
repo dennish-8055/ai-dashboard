@@ -1,0 +1,11 @@
+Date,Product,Region,Units,Revenue
+01-01-26,Laptop,South,5,5000
+02-01-26,Phone,North,10,3000
+03-01-26,Tablet,West,7,2100
+04-01-26,Monitor,East,4,4000
+05-01-26,Keyboard,South,12,1200
+06-01-26,Mouse,North,15,900
+07-01-26,Printer,West,3,2500
+08-01-26,Camera,East,6,3600
+09-01-26,Speaker,South,8,1600
+10-01-26,Headphones,North,9,1800
