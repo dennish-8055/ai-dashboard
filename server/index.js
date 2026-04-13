@@ -29,26 +29,26 @@ app.get("/", (req, res) => {
 // HELPERS
 // =====================
 
-// parse numbers safely
+// Parse numbers safely
 function parseNumber(value) {
   if (!value) return NaN;
   return parseFloat(value.toString().replace(/,/g, "").trim());
 }
 
-// detect numeric columns
+// Detect numeric columns
 function getNumericColumns(columns, data) {
   return columns.filter(col =>
     data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
-// detect category columns
+// Detect category columns
 function getCategoryColumns(columns, numericColumns) {
   return columns.filter(col => !numericColumns.includes(col));
 }
 
-// 🔥 WORD MATCH (KEY FIX)
-function matchColumnFromQuestion(question, columns) {
+// 🔥 Better word matching
+function matchColumn(question, columns) {
   const words = question.toLowerCase().split(" ");
 
   for (let word of words) {
@@ -127,29 +127,47 @@ app.post("/ask", async (req, res) => {
     const numericColumns = getNumericColumns(columns, dataset);
     const categoryColumns = getCategoryColumns(columns, numericColumns);
 
-    // 🔥 METRIC (number column)
+    // =====================
+    // 🔥 METRIC DETECTION
+    // =====================
     let metricColumn =
-      matchColumnFromQuestion(question, numericColumns) ||
-      matchColumnFromQuestion(aiQuery.metric || "", numericColumns) ||
-      numericColumns[0];
+      matchColumn(question, numericColumns) ||
+      matchColumn(aiQuery.metric || "", numericColumns);
 
-    // 🔥 CATEGORY (group column)
+    // ❗ VALIDATION (IMPORTANT FIX)
+    if (!metricColumn && numericColumns.length === 0) {
+      return res.json([]); // no numeric data at all
+    }
+
+    // fallback ONLY if numeric exists
+    if (!metricColumn && numericColumns.length > 0) {
+      metricColumn = numericColumns[0];
+    }
+
+    // =====================
+    // 🔥 CATEGORY DETECTION
+    // =====================
     let categoryColumn =
-      matchColumnFromQuestion(question, categoryColumns) ||
-      matchColumnFromQuestion(aiQuery.column || "", categoryColumns) ||
+      matchColumn(question, categoryColumns) ||
+      matchColumn(aiQuery.column || "", categoryColumns) ||
       categoryColumns[0];
 
-    // 🔥 DETECT COUNT QUERY
+    // =====================
+    // 🔥 QUERY TYPE
+    // =====================
     const q = question.toLowerCase();
 
     const isCountQuery =
       q.includes("count") ||
       q.includes("number") ||
       q.includes("how many") ||
-      numericColumns.length === 0;
+      !metricColumn;
 
     console.log("Using:", categoryColumn, metricColumn, isCountQuery);
 
+    // =====================
+    // 🔥 AGGREGATION
+    // =====================
     const result = {};
 
     dataset.forEach(row => {
