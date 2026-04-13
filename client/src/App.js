@@ -169,14 +169,14 @@ function App() {
               <XAxis dataKey="name" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
 
-              {/* ✅ FIXED TOOLTIP */}
+              {/* ✅ TOOLTIP */}
               <Tooltip
-                content={<CustomTooltip />}
-                cursor={{ fill: "rgba(56,189,248,0.08)" }}
-                offset={10}
+               content={<CustomTooltip />}
+               cursor={{ fill: "rgba(56,189,248,0.08)" }}
+               wrapperStyle={{ outline: "none" }}
               />
 
-              {/* ✅ IMPROVED BAR */}
+              {/* ✅ BAR */}
               <Bar
                 dataKey="value"
                 fill="#38bdf8"
