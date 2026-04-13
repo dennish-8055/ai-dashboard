@@ -157,7 +157,7 @@ No need to keep your laptop running — app is hosted online.
 
 ## 👨‍💻 Author
 
-Developed by Dennis
+Developed by Dennish
 
 ---
 
