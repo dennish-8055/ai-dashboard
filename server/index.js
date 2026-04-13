@@ -29,38 +29,26 @@ app.get("/", (req, res) => {
 // =====================
 // ✅ HELPERS
 // =====================
+
+// Clean number
 function parseNumber(value) {
   if (!value) return 0;
   const cleaned = value.toString().replace(/,/g, "").trim();
-  return parseFloat(cleaned) || 0;
+  return parseFloat(cleaned);
 }
 
-function findBestMatch(value, columns) {
-  if (!value) return null;
-  const cleaned = value.toLowerCase().trim();
-  return columns.find(col =>
-    col.toLowerCase().includes(cleaned)
+// Detect numeric columns
+function getNumericColumns(columns, data) {
+  return columns.filter(col =>
+    data.some(row => !isNaN(parseNumber(row[col])))
   );
 }
 
-// 🔥 FORCE column from question 
-function detectColumnFromQuestion(question, columns) {
-  const q = question.toLowerCase();
-
-  if (q.includes("region")) {
-    return columns.find(c => c.toLowerCase().includes("region"));
-  }
-  if (q.includes("date")) {
-    return columns.find(c => c.toLowerCase().includes("date"));
-  }
-  if (q.includes("product")) {
-    return columns.find(c => c.toLowerCase().includes("product"));
-  }
-  if (q.includes("category")) {
-    return columns.find(c => c.toLowerCase().includes("category"));
-  }
-
-  return null;
+// Smart column match
+function findBestMatch(value, columns) {
+  if (!value) return null;
+  const v = value.toLowerCase().trim();
+  return columns.find(c => c.toLowerCase().includes(v));
 }
 
 // =====================
@@ -71,10 +59,10 @@ app.post("/upload", upload.single("file"), (req, res) => {
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on("data", (row) => dataset.push(row))
+    .on("data", row => dataset.push(row))
     .on("end", () => {
       console.log("CSV Loaded:", dataset[0]);
-      res.json({ message: "File uploaded", rows: dataset.length });
+      res.json({ message: "Uploaded", rows: dataset.length });
     });
 });
 
@@ -97,7 +85,7 @@ Return JSON:
 `;
 
     const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts: [{ text: prompt }] }]
     });
 
     const text = result.response.text()
@@ -126,50 +114,39 @@ app.post("/ask", async (req, res) => {
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
 
     // =====================
-    // 🔥 NUMERIC COLUMNS
+    // 🔥 DETECT STRUCTURE
     // =====================
-    const numericColumns = columns.filter(col =>
-      dataset.some(row => !isNaN(parseNumber(row[col])))
-    );
-
+    const numericColumns = getNumericColumns(columns, dataset);
     const categoryColumns = columns.filter(col =>
       !numericColumns.includes(col)
     );
 
     // =====================
-    // 🔥 CATEGORY 
+    // 🔥 SELECT CATEGORY 
     // =====================
     let categoryColumn =
-      detectColumnFromQuestion(question, columns) ||   // ✅ strongest
-      findBestMatch(aiQuery.column, columns) ||        // AI
-      categoryColumns[0];                              // fallback
+      findBestMatch(aiQuery.column, columns) ||
+      categoryColumns[0];
 
     // =====================
-    // 🔥 METRIC
+    // 🔥 SELECT METRIC
     // =====================
-    let metricColumn = numericColumns[0];
+    let metricColumn =
+      findBestMatch(aiQuery.metric, columns) ||
+      numericColumns[0];
+
+    // =====================
+    // 🔥 DETECT QUERY TYPE
+    // =====================
     const q = question.toLowerCase();
 
-    if (q.includes("revenue")) {
-      metricColumn =
-        numericColumns.find(c => c.toLowerCase().includes("revenue")) ||
-        metricColumn;
-    }
-    else if (q.includes("sales")) {
-      metricColumn =
-        numericColumns.find(c => c.toLowerCase().includes("sales")) ||
-        metricColumn;
-    }
-    else if (q.includes("unit")) {
-      metricColumn =
-        numericColumns.find(c => c.toLowerCase().includes("unit")) ||
-        metricColumn;
-    }
+    const isCountQuery =
+      q.includes("count") ||
+      q.includes("number") ||
+      q.includes("how many") ||
+      numericColumns.length === 0;
 
-    const aiMetric = findBestMatch(aiQuery.metric, columns);
-    if (aiMetric) metricColumn = aiMetric;
-
-    console.log("FINAL:", categoryColumn, metricColumn);
+    console.log("Using:", categoryColumn, metricColumn, isCountQuery);
 
     // =====================
     // 🔥 AGGREGATE
@@ -178,11 +155,16 @@ app.post("/ask", async (req, res) => {
 
     dataset.forEach(row => {
       const key = row[categoryColumn];
-      const value = parseNumber(row[metricColumn]);
-
       if (!key) return;
 
-      result[key] = (result[key] || 0) + value;
+      if (isCountQuery) {
+        result[key] = (result[key] || 0) + 1;
+      } else {
+        const value = parseNumber(row[metricColumn]);
+        if (!isNaN(value)) {
+          result[key] = (result[key] || 0) + value;
+        }
+      }
     });
 
     const formatted = Object.entries(result).map(([k, v]) => ({
