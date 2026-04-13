@@ -13,20 +13,21 @@ app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
 
+// Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 let dataset = [];
 
 // =====================
-// ROOT
+// ✅ ROOT
 // =====================
 app.get("/", (req, res) => {
   res.send("✅ Server is running");
 });
 
 // =====================
-// HELPERS
+// ✅ HELPERS
 // =====================
 function parseNumber(value) {
   if (!value) return 0;
@@ -36,25 +37,34 @@ function parseNumber(value) {
 
 function findBestMatch(value, columns) {
   if (!value) return null;
+  const cleaned = value.toLowerCase().trim();
   return columns.find(col =>
-    col.toLowerCase().includes(value.toLowerCase())
+    col.toLowerCase().includes(cleaned)
   );
 }
 
-// 🔥 Strong column detection
+// 🔥 FORCE column from question (MAIN FIX)
 function detectColumnFromQuestion(question, columns) {
   const q = question.toLowerCase();
 
-  if (q.includes("region")) return columns.find(c => c.toLowerCase().includes("region"));
-  if (q.includes("date")) return columns.find(c => c.toLowerCase().includes("date"));
-  if (q.includes("product")) return columns.find(c => c.toLowerCase().includes("product"));
-  if (q.includes("category")) return columns.find(c => c.toLowerCase().includes("category"));
+  if (q.includes("region")) {
+    return columns.find(c => c.toLowerCase().includes("region"));
+  }
+  if (q.includes("date")) {
+    return columns.find(c => c.toLowerCase().includes("date"));
+  }
+  if (q.includes("product")) {
+    return columns.find(c => c.toLowerCase().includes("product"));
+  }
+  if (q.includes("category")) {
+    return columns.find(c => c.toLowerCase().includes("category"));
+  }
 
   return null;
 }
 
 // =====================
-// UPLOAD
+// ✅ UPLOAD
 // =====================
 app.post("/upload", upload.single("file"), (req, res) => {
   dataset = [];
@@ -69,7 +79,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
 });
 
 // =====================
-// AI
+// ✅ AI
 // =====================
 async function getAIQuery(question, columns, sample) {
   try {
@@ -102,7 +112,7 @@ Return JSON:
 }
 
 // =====================
-// ASK
+// ✅ ASK
 // =====================
 app.post("/ask", async (req, res) => {
   try {
@@ -115,7 +125,9 @@ app.post("/ask", async (req, res) => {
 
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
 
-    // numeric columns
+    // =====================
+    // 🔥 NUMERIC COLUMNS
+    // =====================
     const numericColumns = columns.filter(col =>
       dataset.some(row => !isNaN(parseNumber(row[col])))
     );
@@ -125,51 +137,50 @@ app.post("/ask", async (req, res) => {
     );
 
     // =====================
-    // CATEGORY
+    // 🔥 CATEGORY (FINAL FIX)
     // =====================
     let categoryColumn =
-      detectColumnFromQuestion(question, columns) ||
-      findBestMatch(aiQuery.column, columns) ||
-      categoryColumns[0];
+      detectColumnFromQuestion(question, columns) ||   // ✅ strongest
+      findBestMatch(aiQuery.column, columns) ||        // AI
+      categoryColumns[0];                              // fallback
 
     // =====================
-    // METRIC
+    // 🔥 METRIC
     // =====================
-    let metricColumn = null;
+    let metricColumn = numericColumns[0];
     const q = question.toLowerCase();
 
-    // detect metric properly
     if (q.includes("revenue")) {
-      metricColumn = numericColumns.find(c => c.toLowerCase().includes("revenue"));
-    } else if (q.includes("unit")) {
-      metricColumn = numericColumns.find(c => c.toLowerCase().includes("unit"));
-    } else if (q.includes("sales")) {
-      metricColumn = numericColumns.find(c => c.toLowerCase().includes("sales"));
+      metricColumn =
+        numericColumns.find(c => c.toLowerCase().includes("revenue")) ||
+        metricColumn;
+    }
+    else if (q.includes("sales")) {
+      metricColumn =
+        numericColumns.find(c => c.toLowerCase().includes("sales")) ||
+        metricColumn;
+    }
+    else if (q.includes("unit")) {
+      metricColumn =
+        numericColumns.find(c => c.toLowerCase().includes("unit")) ||
+        metricColumn;
     }
 
-    // fallback from AI
-    if (!metricColumn) {
-      const aiMetric = findBestMatch(aiQuery.metric, numericColumns);
-      if (aiMetric) metricColumn = aiMetric;
-    }
-
-    // final fallback
-    if (!metricColumn) {
-      metricColumn = numericColumns[0];
-    }
+    const aiMetric = findBestMatch(aiQuery.metric, columns);
+    if (aiMetric) metricColumn = aiMetric;
 
     console.log("FINAL:", categoryColumn, metricColumn);
 
     // =====================
-    // AGGREGATION
+    // 🔥 AGGREGATE
     // =====================
     const result = {};
 
     dataset.forEach(row => {
       const key = row[categoryColumn];
-      if (!key) return;
+      const value = parseNumber(row[metricColumn]);
 
-      let value = parseNumber(row[metricColumn]);
+      if (!key) return;
 
       result[key] = (result[key] || 0) + value;
     });
