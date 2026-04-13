@@ -44,7 +44,7 @@ function getCategoryColumns(columns, numericColumns) {
   return columns.filter(col => !numericColumns.includes(col));
 }
 
-// 🔥 STRONG MATCH
+
 function matchColumn(question, columns) {
   const q = question.toLowerCase();
 
@@ -58,7 +58,7 @@ function matchColumn(question, columns) {
   });
 }
 
-// 🔥 DATE FORMAT (dynamic)
+// DATE FORMAT (dynamic)
 function formatDate(value, mode = "month") {
   const d = new Date(value);
   if (isNaN(d)) return value;
