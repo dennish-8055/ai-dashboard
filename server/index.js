@@ -97,7 +97,7 @@ app.post("/ask", async (req, res) => {
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
     console.log("AI Query:", aiQuery);
 
-    // ✅ FIXED NUMERIC DETECTION (checks all rows)
+    // ✅ DETECT NUMERIC COLUMNS (robust)
     const numericColumns = columns.filter(col => {
       return dataset.some(row => {
         const value = row[col];
@@ -108,24 +108,41 @@ app.post("/ask", async (req, res) => {
       });
     });
 
-    // ✅ category columns
+    // ✅ CATEGORY COLUMNS
     const categoryColumns = columns.filter(col => !numericColumns.includes(col));
 
-    // remove date columns
+    // remove date-like columns
     const filteredCategory = categoryColumns.filter(col =>
       !col.toLowerCase().includes("date")
     );
 
-    // ✅ FINAL SELECTION
+    // ✅ SELECT CATEGORY COLUMN
     let categoryColumn =
       aiQuery.column && columns.includes(aiQuery.column)
         ? aiQuery.column
         : filteredCategory[0] || categoryColumns[0];
 
-    let metricColumn =
-      aiQuery.metric && columns.includes(aiQuery.metric)
-        ? aiQuery.metric
-        : numericColumns[0];
+    // ✅ SMART METRIC SELECTION
+    let metricColumn = numericColumns[0];
+    const lowerQ = question.toLowerCase();
+
+    if (lowerQ.includes("revenue")) {
+      const col = numericColumns.find(c => c.toLowerCase().includes("revenue"));
+      if (col) metricColumn = col;
+    } 
+    else if (lowerQ.includes("sales")) {
+      const col = numericColumns.find(c => c.toLowerCase().includes("sales"));
+      if (col) metricColumn = col;
+    } 
+    else if (lowerQ.includes("unit")) {
+      const col = numericColumns.find(c => c.toLowerCase().includes("unit"));
+      if (col) metricColumn = col;
+    }
+
+    // ✅ AI override only if valid
+    if (aiQuery.metric && columns.includes(aiQuery.metric)) {
+      metricColumn = aiQuery.metric;
+    }
 
     console.log("Using:", categoryColumn, metricColumn);
 
@@ -134,7 +151,6 @@ app.post("/ask", async (req, res) => {
     dataset.forEach((row) => {
       const key = row[categoryColumn];
 
-      // ✅ FIXED VALUE PARSING
       const rawValue = row[metricColumn];
       const cleanedValue = rawValue
         ? rawValue.toString().replace(/,/g, "").trim()
