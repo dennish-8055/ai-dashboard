@@ -7,6 +7,7 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
+
 app.use(cors({
   origin: "*"
 }));
@@ -14,10 +15,8 @@ app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
 
-
+// Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 let dataset = [];
@@ -40,13 +39,15 @@ app.post("/upload", upload.single("file"), (req, res) => {
     });
 });
 
-// ✅ AI function 
-async function getAIQuery(question, columns) {
+// ✅ AI function
+async function getAIQuery(question, columns, dataSample) {
   try {
     const prompt = `
 You are a data assistant.
 
 Columns available: ${columns}
+
+Sample data: ${JSON.stringify(dataSample)}
 
 Convert the question into JSON.
 
@@ -73,7 +74,6 @@ Return ONLY valid JSON:
 
     console.log("AI RAW:", text);
 
-    // ✅ Clean JSON 
     text = text.replace(/```json|```/g, "").trim();
 
     return JSON.parse(text);
@@ -81,10 +81,14 @@ Return ONLY valid JSON:
   } catch (err) {
     console.log("⚠️ AI not available, using fallback logic");
 
-    // ✅ fallback so app never crashes
+    // 🔥 SMART fallback (auto-detect numeric column)
+    const numericColumn = columns.find(col =>
+      !isNaN(dataSample[col])
+    );
+
     return {
       column: columns[0],
-      metric: columns[1],
+      metric: numericColumn || columns[1],
     };
   }
 }
@@ -101,18 +105,27 @@ app.post("/ask", async (req, res) => {
     const columns = Object.keys(dataset[0]);
     console.log("Columns:", columns);
 
-    const aiQuery = await getAIQuery(question, columns);
+    // 🔥 Detect numeric column
+    let numericColumn = null;
+    for (let col of columns) {
+      if (!isNaN(dataset[0][col])) {
+        numericColumn = col;
+        break;
+      }
+    }
+
+    const aiQuery = await getAIQuery(question, columns, dataset[0]);
     console.log("AI Query:", aiQuery);
 
-    if (!aiQuery.column || !aiQuery.metric) {
-      return res.status(400).json({ error: "AI could not understand query" });
-    }
+    // ✅ fallback safety
+    const categoryColumn = aiQuery.column || columns[0];
+    const metricColumn = aiQuery.metric || numericColumn || columns[1];
 
     const resultData = {};
 
     dataset.forEach((row) => {
-      const key = row[aiQuery.column];
-      const value = parseFloat(row[aiQuery.metric]) || 0;
+      const key = row[categoryColumn];
+      const value = parseFloat(row[metricColumn]) || 0;
 
       if (!key) return;
 
@@ -127,7 +140,7 @@ app.post("/ask", async (req, res) => {
     res.json(formatted);
 
   } catch (err) {
-    console.log("⚠️ AI not available, using fallback logic");
+    console.log("🔥 ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
