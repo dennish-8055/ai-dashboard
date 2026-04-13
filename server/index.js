@@ -77,9 +77,8 @@ Return ONLY valid JSON:
     return JSON.parse(text);
 
   } catch (err) {
-    console.log("⚠️ AI failed, using smart fallback");
-
-    return {}; // let fallback logic handle
+    console.log("⚠️ AI failed, using fallback");
+    return {};
   }
 }
 
@@ -98,19 +97,21 @@ app.post("/ask", async (req, res) => {
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
     console.log("AI Query:", aiQuery);
 
-    // 🔥 SMART COLUMN DETECTION
+    // ✅ FIXED NUMERIC DETECTION (checks all rows)
+    const numericColumns = columns.filter(col => {
+      return dataset.some(row => {
+        const value = row[col];
+        if (!value) return false;
 
-    // detect numeric columns
-    const numericColumns = columns.filter(col =>
-      !isNaN(dataset[0][col])
-    );
+        const cleaned = value.toString().replace(/,/g, "").trim();
+        return !isNaN(cleaned);
+      });
+    });
 
-    // detect non-numeric columns (category)
-    const categoryColumns = columns.filter(col =>
-      isNaN(dataset[0][col])
-    );
+    // ✅ category columns
+    const categoryColumns = columns.filter(col => !numericColumns.includes(col));
 
-    // remove date-like columns from category
+    // remove date columns
     const filteredCategory = categoryColumns.filter(col =>
       !col.toLowerCase().includes("date")
     );
@@ -132,7 +133,14 @@ app.post("/ask", async (req, res) => {
 
     dataset.forEach((row) => {
       const key = row[categoryColumn];
-      const value = parseFloat(row[metricColumn]) || 0;
+
+      // ✅ FIXED VALUE PARSING
+      const rawValue = row[metricColumn];
+      const cleanedValue = rawValue
+        ? rawValue.toString().replace(/,/g, "").trim()
+        : 0;
+
+      const value = parseFloat(cleanedValue) || 0;
 
       if (!key) return;
 
