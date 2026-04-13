@@ -8,9 +8,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 
-app.use(cors({
-  origin: "*"
-}));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
@@ -79,17 +77,9 @@ Return ONLY valid JSON:
     return JSON.parse(text);
 
   } catch (err) {
-    console.log("⚠️ AI not available, using fallback logic");
+    console.log("⚠️ AI failed, using smart fallback");
 
-    // 🔥 SMART fallback (auto-detect numeric column)
-    const numericColumn = columns.find(col =>
-      !isNaN(dataSample[col])
-    );
-
-    return {
-      column: columns[0],
-      metric: numericColumn || columns[1],
-    };
+    return {}; // let fallback logic handle
   }
 }
 
@@ -105,21 +95,38 @@ app.post("/ask", async (req, res) => {
     const columns = Object.keys(dataset[0]);
     console.log("Columns:", columns);
 
-    // 🔥 Detect numeric column
-    let numericColumn = null;
-    for (let col of columns) {
-      if (!isNaN(dataset[0][col])) {
-        numericColumn = col;
-        break;
-      }
-    }
-
     const aiQuery = await getAIQuery(question, columns, dataset[0]);
     console.log("AI Query:", aiQuery);
 
-    // ✅ fallback safety
-    const categoryColumn = aiQuery.column || columns[0];
-    const metricColumn = aiQuery.metric || numericColumn || columns[1];
+    // 🔥 SMART COLUMN DETECTION
+
+    // detect numeric columns
+    const numericColumns = columns.filter(col =>
+      !isNaN(dataset[0][col])
+    );
+
+    // detect non-numeric columns (category)
+    const categoryColumns = columns.filter(col =>
+      isNaN(dataset[0][col])
+    );
+
+    // remove date-like columns from category
+    const filteredCategory = categoryColumns.filter(col =>
+      !col.toLowerCase().includes("date")
+    );
+
+    // ✅ FINAL SELECTION
+    let categoryColumn =
+      aiQuery.column && columns.includes(aiQuery.column)
+        ? aiQuery.column
+        : filteredCategory[0] || categoryColumns[0];
+
+    let metricColumn =
+      aiQuery.metric && columns.includes(aiQuery.metric)
+        ? aiQuery.metric
+        : numericColumns[0];
+
+    console.log("Using:", categoryColumn, metricColumn);
 
     const resultData = {};
 
