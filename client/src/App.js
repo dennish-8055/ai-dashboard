@@ -21,7 +21,9 @@ function App() {
     process.env.REACT_APP_API_URL ||
     "https://ai-dashboard-backend.onrender.com";
 
+  // =====================
   // Upload
+  // =====================
   const uploadFile = async () => {
     if (!file) return setMessage("⚠️ Select a file");
 
@@ -37,7 +39,9 @@ function App() {
     }
   };
 
+  // =====================
   // Ask
+  // =====================
   const askAI = async () => {
     if (!question) return setMessage("⚠️ Enter a question");
 
@@ -47,7 +51,7 @@ function App() {
     try {
       const res = await axios.post(`${API}/ask`, { question });
 
-      if (!res.data.length) {
+      if (!res.data || res.data.length === 0) {
         setData([]);
         setMessage("📭 No data found");
       } else {
@@ -60,25 +64,37 @@ function App() {
     setLoading(false);
   };
 
+  // =====================
   // Insight
+  // =====================
   const getInsight = () => {
     if (!data.length) return "";
 
-    const max = data.reduce((a, b) => (a.value > b.value ? a : b));
+    const max = data.reduce((a, b) =>
+      a.value > b.value ? a : b
+    );
+
     return `📊 ${max.name} has highest value (${max.value.toLocaleString()})`;
   };
 
-  // Tooltip
+  // =====================
+  // Tooltip (clean & centered)
+  // =====================
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload?.length) {
+    if (active && payload && payload.length) {
       return (
-        <div style={{
-          background: "#020617",
-          padding: "10px",
-          borderRadius: "10px",
-          border: "1px solid #334155"
-        }}>
-          <p style={{ color: "#38bdf8", fontWeight: "bold" }}>{label}</p>
+        <div
+          style={{
+            background: "#020617",
+            padding: "10px 14px",
+            borderRadius: "10px",
+            border: "1px solid #334155",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.5)"
+          }}
+        >
+          <p style={{ color: "#38bdf8", fontWeight: "bold" }}>
+            {label}
+          </p>
           <p style={{ color: "#e2e8f0" }}>
             Value: {payload[0].value.toLocaleString()}
           </p>
@@ -89,51 +105,131 @@ function App() {
   };
 
   return (
-    <div style={{
-      background: "#020617",
-      minHeight: "100vh",
-      color: "white",
-      padding: "40px"
-    }}>
-      <h1>📊 AI Data Dashboard</h1>
+    <div
+      style={{
+        background: "#020617",
+        minHeight: "100vh",
+        color: "white",
+        padding: "40px",
+        fontFamily: "system-ui"
+      }}
+    >
+      <h1 style={{ marginBottom: "20px" }}>
+        📊 AI Data Dashboard
+      </h1>
 
       {/* Upload */}
       <div style={{ marginBottom: 20 }}>
-        <input type="file" onChange={e => setFile(e.target.files[0])} />
-        <button onClick={uploadFile}>Upload</button>
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files[0])}
+        />
+        <button style={btn} onClick={uploadFile}>
+          Upload
+        </button>
       </div>
 
       {/* Ask */}
       <div style={{ marginBottom: 20 }}>
         <input
+          style={input}
           value={question}
-          onChange={e => setQuestion(e.target.value)}
+          onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask: total revenue by region"
         />
-        <button onClick={askAI}>Ask</button>
+        <button style={btn} onClick={askAI}>
+          Ask
+        </button>
       </div>
 
-      {message && <p>{message}</p>}
-      {loading && <p>⏳ Loading...</p>}
+      {/* Message */}
+      {message && (
+        <p style={{ color: "#94a3b8" }}>{message}</p>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <p style={{ color: "#38bdf8" }}>⏳ Loading...</p>
+      )}
 
       {/* Chart */}
       {data.length > 0 && (
-        <div style={{ background: "#0f172a", padding: 20, borderRadius: 10 }}>
-          <ResponsiveContainer width="100%" height={300}>
+        <div
+          style={{
+            background: "#0f172a",
+            padding: "20px",
+            borderRadius: "12px",
+            marginTop: "20px"
+          }}
+        >
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={data}>
-              <CartesianGrid stroke="#1e293b" />
-              <XAxis dataKey="name" stroke="#94a3b8" />
+              <CartesianGrid
+                stroke="#1e293b"
+                vertical={false}
+              />
+
+              <XAxis
+                dataKey="name"
+                stroke="#94a3b8"
+                tick={{ fontSize: 12 }}
+                interval={0}
+                angle={data.length > 8 ? -25 : 0}
+                textAnchor={data.length > 8 ? "end" : "middle"}
+              />
+
               <YAxis stroke="#94a3b8" />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" fill="#38bdf8" />
+
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ fill: "rgba(56,189,248,0.08)" }}
+              />
+
+              <Bar
+                dataKey="value"
+                fill="#38bdf8"
+                radius={[6, 6, 0, 0]}
+                activeBar={{
+                  fill: "#0ea5e9"
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {data.length > 0 && <p>{getInsight()}</p>}
+      {/* Insight */}
+      {data.length > 0 && (
+        <p style={{ marginTop: "15px", color: "#94a3b8" }}>
+          {getInsight()}
+        </p>
+      )}
     </div>
   );
 }
+
+// =====================
+// Styles
+// =====================
+const btn = {
+  marginLeft: "10px",
+  padding: "8px 14px",
+  background: "#38bdf8",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  color: "#020617"
+};
+
+const input = {
+  padding: "8px",
+  width: "320px",
+  borderRadius: "6px",
+  border: "1px solid #334155",
+  outline: "none",
+  background: "#020617",
+  color: "white"
+};
 
 export default App;
