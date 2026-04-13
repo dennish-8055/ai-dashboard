@@ -10,12 +10,9 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ SAFE API URL (fallback added)
   const API =
     process.env.REACT_APP_API_URL ||
-    "https://ai-dashboard-backend.onrender.com"; // 🔥 replace if using other link
-
-  console.log("API URL:", API); // debug
+    "https://ai-dashboard-backend.onrender.com";
 
   // Upload CSV
   const uploadFile = async () => {
@@ -30,6 +27,7 @@ function App() {
     try {
       await axios.post(`${API}/upload`, formData);
       alert("✅ File Uploaded");
+      setData([]); // 🔥 reset old chart
     } catch (err) {
       console.error(err);
       alert("❌ Upload failed");
@@ -47,8 +45,17 @@ function App() {
 
     try {
       const res = await axios.post(`${API}/ask`, { question });
-      console.log("Response:", res.data); // debug
-      setData(res.data);
+
+      console.log("Response:", res.data);
+
+      // 🔥 FIX: validate response
+      if (!res.data || res.data.length === 0) {
+        alert("⚠️ No data found for this question");
+        setData([]);
+      } else {
+        setData(res.data);
+      }
+
     } catch (err) {
       console.error(err);
       alert("❌ Error fetching data");
@@ -105,30 +112,38 @@ function App() {
         <p style={{ color: "#38bdf8" }}>⏳ Processing...</p>
       )}
 
+      {/* ❌ No Data Message */}
+      {!loading && data.length === 0 && (
+        <p style={{ color: "#94a3b8" }}>
+          📭 No data to display. Try a different question.
+        </p>
+      )}
+
       {/* Chart */}
-      <div style={{
-        background: "#1e293b",
-        padding: "20px",
-        borderRadius: "10px"
-      }}>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
-            <XAxis dataKey="name" stroke="#ccc" />
-            <YAxis stroke="#ccc" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1e293b",
-                border: "none",
-                borderRadius: "8px",
-                color: "white"
-              }}
-              itemStyle={{ color: "#38bdf8" }}
-              cursor={{ fill: "rgba(255,255,255,0.05)" }}
-            />
-            <Bar dataKey="value" fill="#38bdf8" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {data.length > 0 && (
+        <div style={{
+          background: "#1e293b",
+          padding: "20px",
+          borderRadius: "10px"
+        }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data}>
+              <XAxis dataKey="name" stroke="#ccc" />
+              <YAxis stroke="#ccc" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1e293b",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white"
+                }}
+                itemStyle={{ color: "#38bdf8" }}
+              />
+              <Bar dataKey="value" fill="#38bdf8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Insight */}
       {data.length > 0 && (
@@ -144,7 +159,7 @@ function App() {
   );
 }
 
-// Button style
+// Styles
 const btn = {
   marginLeft: "10px",
   padding: "8px 14px",
@@ -155,7 +170,6 @@ const btn = {
   fontWeight: "bold"
 };
 
-// Input style
 const input = {
   padding: "8px",
   width: "300px",
