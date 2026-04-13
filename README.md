@@ -6,8 +6,8 @@ An intelligent web application that allows users to upload CSV files, ask natura
 
 ## 🚀 Live Demo
 
-Frontend: https://ai-dashboard-three-rouge.vercel.app
-Backend: https://ai-dashboard-backend.onrender.com
+* 🌐 Frontend: https://ai-dashboard-three-rouge.vercel.app
+* ⚙️ Backend: https://ai-dashboard-backend.onrender.com
 
 ---
 
@@ -18,16 +18,19 @@ Backend: https://ai-dashboard-backend.onrender.com
 * 📊 Automatic data aggregation
 * 📈 Interactive bar chart visualization
 * 🧠 AI-powered query understanding (Google Gemini)
-* 🔍 Smart column detection (works with different datasets)
-* 💡 Auto-generated insights
+* 🔍 Smart column detection (works across different datasets)
+* 💡 Auto-generated insights (highest value detection)
 
 ---
 
 ## 🧠 Example Questions
 
+Try asking:
+
 * total revenue by product
 * total sales by region
 * total units by category
+* total salary by department
 * total revenue by date
 
 ---
@@ -105,6 +108,12 @@ Run backend:
 node index.js
 ```
 
+Server runs on:
+
+```
+http://localhost:5000
+```
+
 ---
 
 ### 3️⃣ Frontend Setup
@@ -128,36 +137,41 @@ npm start
 
 ---
 
-## 🌐 Deployment
+## 📊 How It Works
 
-* Frontend deployed on Vercel
-* Backend deployed on Render
+1. Upload a CSV file
+2. Ask a question (e.g., "total revenue by region")
+3. AI detects:
 
-No need to keep your laptop running — app is hosted online.
+   * Category column (grouping)
+   * Metric column (numeric value)
+4. Backend aggregates data
+5. Frontend renders chart + insight
 
 ---
 
 ## ⚠️ Limitations
 
 * Supports aggregation queries only (sum-based)
-* Does not support filtering (e.g., only Asia)
-* Does not support advanced analytics (avg, min, max)
+* Does not support filtering (e.g., "only Asia")
+* Limited support for advanced analytics (avg, min, max)
+* Depends on meaningful column names in CSV
 
 ---
 
 ## 🚀 Future Improvements
 
-* Top N results (Top 5 products)
-* Filtering support (region-based queries)
-* Multiple chart types (line, pie)
-* Sorting & time-series analysis
-* Better AI query understanding
+* 🔝 Top N results (Top 5 products)
+* 🔎 Filtering support (region/date-based queries)
+* 📊 Multiple chart types (line, pie)
+* 📅 Time-series analysis
+* 🧠 Improved AI query understanding
 
 ---
 
 ## 👨‍💻 Author
 
-Developed by Dennish
+Developed by **Dennish**
 
 ---
 
