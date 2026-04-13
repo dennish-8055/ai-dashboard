@@ -87,7 +87,7 @@ function App() {
   };
 
   // =====================
-  // Custom Tooltip
+  //  Tooltip
   // =====================
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
